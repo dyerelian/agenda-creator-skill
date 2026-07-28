@@ -1,0 +1,14 @@
+# Python bytecode
+__pycache__/
+*.pyc
+
+# Scratch intermediate agenda JSON and generated Word docs — never commit meeting content
+payload*.json
+agenda*.json
+*.docx
+
+# OS / editor cruft
+Thumbs.db
+.DS_Store
+*.swp
+~$*
