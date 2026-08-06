@@ -2,6 +2,21 @@
 
 Use this reference when the agenda should reflect prior notes, meetings, email, calendar, Slack, Monday.com, or GTD workbook context. Keep searches scoped to the named manager, team, project, or 1:1 folder.
 
+## Recurring meetings: prior-instance & recap sourcing
+
+Most recurring meetings (1:1s, standing syncs) should open with a **Last meeting recap** built from the *previous instance* of the same meeting. Resolving that instance and chaining to it is the core of good follow-up. Follow this procedure:
+
+1. **Detect recurrence / identity.** Treat a meeting as recurring when its title or counterpart matches a prior agenda or a prior Granola note. For a stable identity across runs, match on *normalized subject* + start time (the same instance-key convention close-day uses: normalized subject + `|` + `YYYY-MM-DDTHH:MM`), so both skills recognize "the same meeting" consistently.
+2. **Find the prior agenda (deterministic — this is the follow-up chain).** `Glob` the Agendas base folder for earlier dated instances of the same title:
+   ```
+   C:\Users\E724101\OneDrive - Automobile Club of Southern California\Daily Plan\Agendas\<YYYY_MM_DD>\<HHMM> <Title>.docx
+   ```
+   Pick the most recent dated folder *before* the current meeting date whose filename title matches. Read its text (unzip `word/document.xml`) to lift last time's commitments, decisions, and open loops — these carry forward into this agenda.
+3. **Find the prior instance's Granola note.** Use the `granola` MCP (`search_notes` / `recent_notes`) with the counterpart or team name, then correlate to the prior instance by **start-time overlap + fuzzy title match**. Prefer `get_note` (AI summary); use `get_transcript` only when exact wording matters.
+4. **Source priority for the recap:** Granola note first → prior agenda `.docx` → manual / local 1:1 notes → recap email. State which source(s) the recap was built from.
+5. **Compose the recap** with: a short summary of what was discussed, open follow-ups / action items (with owner where known), decisions made, and suggested talking points for this meeting derived from last call's loose ends. Unresolved follow-ups should surface as this meeting's talking points or commitments so nothing is dropped.
+6. **If no prior instance is found**, state "No prior meeting found" so the reader knows it was checked, not skipped.
+
 ## Local 1:1 Notes
 
 - Prefer a user-provided 1:1 folder when available.

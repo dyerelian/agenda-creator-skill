@@ -14,7 +14,7 @@ Create a Word agenda for any meeting — a manager 1:1, team meeting, project sy
 1. Identify the counterpart, meeting date, meeting time, and meeting type. Ask a concise question only when the counterpart or meeting identity cannot be inferred. Determine the output path using the rules in "Output location & filename" below.
 2. Gather relevant context before drafting — for **every** meeting type, not just 1:1s. Review prior agendas or notes for this meeting or counterpart, the most recent meeting(s) on this topic, and any related email threads, notes, or documents when available. If connected tools are relevant, read `references/context-sources.md` and use Granola, Outlook, Slack, Atlassian, Monday.com, and GTD workbook context within the user's requested scope. For a general (non-1:1) meeting, also look for the meeting's purpose, attendees, and any open decisions or action items from the last time the group met.
 3. Extract open loops: prior commitments, unresolved asks, blockers, decisions, feedback themes, priority changes, career/growth topics, and relationship or stakeholder risks.
-4. Pin down the **last meeting recap**: the date of the most recent prior meeting on this topic (or with this counterpart), and the top 3 points discussed there. Pull the date and points from the meeting note/transcript, recap email, or prior agenda. If no prior meeting can be found, say so in the section rather than omitting it.
+4. Build the **last meeting recap**. For recurring meetings (1:1s, standing syncs), follow the "Recurring meetings: prior-instance & recap sourcing" procedure in `references/context-sources.md`: resolve the previous instance of the same meeting, chain to its prior agenda `.docx` in the Agendas folder, and pull its Granola note. Source Granola-first (prior agenda / manual notes as fallback) and produce a recap covering: a short summary of what was discussed, open follow-ups / action items, decisions made, and suggested talking points for this meeting. Carry unresolved follow-ups forward as this meeting's talking points or commitments. If no prior meeting can be found, say so in the section rather than omitting it.
 5. Draft two layers:
    - Send-ahead bullets: 3-10 bullets, each 5-10 words, written as concise agenda guideposts safe to paste into an invite, email, or Slack message.
    - Detailed notes: robust private preparation material with context, evidence, prompts, decisions, tradeoffs, risks, and proposed asks.
@@ -110,12 +110,15 @@ Each section's `items` may be objects (`label` + `body`), bare strings, or a `{l
 
 ### Always include: Last meeting recap
 
-Every agenda — 1:1 or general — includes a **Last meeting recap** section near the top (right after the check-in / purpose section). It has two parts:
+Every agenda — 1:1 or general — includes a **Last meeting recap** section near the top (right after the check-in / purpose section). For recurring meetings, build it from the previous instance per the "Recurring meetings: prior-instance & recap sourcing" procedure in `references/context-sources.md` (chain to the prior agenda `.docx` + its Granola note; source Granola-first, prior agenda / notes as fallback). It has these parts:
 
-- **Date of last meeting** — the date of the most recent prior meeting on this topic or with this counterpart.
-- **Top 3 points discussed** — the three most important things covered last time (decisions, key updates, or debates), each as a short bullet.
+- **Date + source** — the date of the last instance and which source(s) the recap was built from (Granola note, prior agenda, notes, or email).
+- **Recap summary** — a short narrative of what was discussed last time.
+- **Open follow-ups / action items** — outstanding commitments carried forward, with owner where known.
+- **Decisions made** — key decisions reached last time.
+- **Suggested talking points** — agenda items derived from last call's loose ends; these can seed this meeting's send-ahead bullets and discussion topics.
 
-Keep it to the date plus three points; deeper detail belongs in the "Context / where things stand" or "Commitments from last time" section. If there was no prior meeting, state "No prior meeting found" so the reader knows it was checked, not skipped.
+Unresolved follow-ups should surface as this meeting's talking points or commitments so nothing is dropped. If there was no prior meeting, state "No prior meeting found" so the reader knows it was checked, not skipped.
 
 ### Manager 1:1 (default structure)
 
@@ -125,8 +128,11 @@ For a manager 1:1, use this structure unless the user asks for a different forma
    - Energy/morale
    - Anything notable personally/professionally
 2. Last meeting recap
-   - Date of last meeting
-   - Top 3 points discussed
+   - Date + source
+   - Recap summary
+   - Open follow-ups / action items
+   - Decisions made
+   - Suggested talking points
 3. Five words
    - My five
    - Manager's five
@@ -168,8 +174,11 @@ For any non-1:1 meeting, adapt the structure to the meeting's purpose and attend
 1. Purpose & desired outcome
    - Why we're meeting and what "done" looks like for this session
 2. Last meeting recap
-   - Date of last meeting
-   - Top 3 points discussed
+   - Date + source
+   - Recap summary
+   - Open follow-ups / action items
+   - Decisions made
+   - Suggested talking points
 3. Attendees & roles
    - Who's in the room and what each owns
 4. Context / where things stand
@@ -186,7 +195,7 @@ For any non-1:1 meeting, adapt the structure to the meeting's purpose and attend
 ## Quality Bar
 
 - Make the agenda specific to this manager, this meeting, and the latest available context.
-- Always include the **Last meeting recap** section (date of the last meeting + top 3 points discussed). If no prior meeting exists, say so explicitly rather than dropping the section.
+- Always include the **Last meeting recap** section. For recurring meetings, chain to the previous instance (prior agenda `.docx` + Granola note, Granola-first) and cover date + source, recap summary, open follow-ups, decisions, and suggested talking points. Surface unresolved follow-ups as this meeting's talking points or commitments so they don't get dropped. If no prior meeting exists, say so explicitly rather than dropping the section.
 - Convert vague topics into useful prompts: decision needed, tradeoff, risk, evidence, ask, or commitment.
 - Treat only the send-ahead bullets as recipient-ready. The rest of the Word document can be much more detailed and candid.
 - Keep sensitive source details out of the send-ahead bullets unless the user explicitly wants them shared.
