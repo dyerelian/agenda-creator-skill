@@ -4,6 +4,12 @@
 The script uses only the Python standard library. It validates the send-ahead
 bullets so agenda pre-reads stay concise: no more than 10 bullets, with each
 bullet containing 5-10 words.
+
+It also enforces the mandatory "Last meeting recap" section on agendas, because a
+missing recap used to render cleanly and so went unnoticed. An agenda must either
+cite a prior-meeting source or state that none was found, along with what was
+searched. Recap failures exit 2; every other error exits 1. Payloads without
+`send_ahead_bullets` (the 1:1 trackers) are exempt; `doc_type` overrides the guess.
 """
 
 from __future__ import annotations
@@ -19,16 +25,49 @@ from xml.sax.saxutils import escape
 
 WORD_LIMIT_RE = re.compile(r"[A-Za-z0-9]+(?:'[A-Za-z0-9]+)?")
 
+# Tolerates an optional leading section number, e.g. "2. Last meeting recap".
+RECAP_HEADING_RE = re.compile(r"^\s*(?:\d+\s*[.)]\s*)?last\s+meeting\s+recap\s*$", re.I)
+NO_PRIOR_SENTINEL = "No prior meeting found"
+RECAP_SOURCE_KINDS = {
+    "outlook_series",
+    "granola",
+    "prior_agenda",
+    "local_notes",
+    "tracker",
+    "email",
+    "alias_map",
+}
+
+# None = decide per payload; main() pins it from --require-recap/--no-require-recap.
+REQUIRE_RECAP: bool | None = None
+
+
+class RecapValidationError(ValueError):
+    """Raised when an agenda has no usable Last meeting recap."""
+
 
 EXAMPLE_DATA = {
     "title": "1:1 with Manager - 2026-06-11",
     "subtitle": "Prepared agenda",
+    "doc_type": "agenda",
     "send_ahead_bullets": [
         "Align on top priorities for this week",
         "Review prior commitments and next steps",
         "Discuss feedback and growth opportunities today",
     ],
     "context_reviewed": ["Prior 1:1 notes", "Granola meeting notes"],
+    "recap_sources": [
+        {
+            "kind": "outlook_series",
+            "status": "found",
+            "detail": "Prior instance 2026-06-04 09:00 PT resolved from the recurring series",
+        },
+        {
+            "kind": "granola",
+            "status": "found",
+            "detail": "Note not_ExampleId00 at 2026-06-04T16:02Z (+2 min); summary used",
+        },
+    ],
     "sections": [
         {
             "heading": "1. Check-in",
@@ -44,7 +83,17 @@ EXAMPLE_DATA = {
             ],
         },
         {
-            "heading": "2. Five words",
+            "heading": "2. Last meeting recap",
+            "items": [
+                {"label": "Date + source", "body": "2026-06-04, from the Granola note for that instance."},
+                {"label": "Recap summary", "body": "What was discussed last time, in a few sentences."},
+                {"label": "Open follow-ups / action items", "body": "Carried commitments, with owners."},
+                {"label": "Decisions made", "body": "Decisions actually reached, not topics raised."},
+                {"label": "Suggested talking points", "body": "Items derived from last call's loose ends."},
+            ],
+        },
+        {
+            "heading": "3. Five words",
             "items": [
                 {"label": "My five", "body": "Priorities, blocker, feedback, stakeholders, growth."},
                 {"label": "Manager's five", "body": "Ask for their five and merge the agenda."},
@@ -76,6 +125,87 @@ def validate_bullets(bullets: list[str]) -> None:
             errors.append(f"bullet {index} has {words} words: {bullet!r}")
     if errors:
         raise ValueError("Send-ahead bullets must be 5-10 words each:\n" + "\n".join(errors))
+
+
+def recap_required(data: dict) -> bool:
+    if REQUIRE_RECAP is not None:
+        return REQUIRE_RECAP
+    declared = text(data.get("doc_type")).strip().lower()
+    if declared:
+        return declared == "agenda"
+    # Trackers and other prep docs carry no send-ahead bullets; agendas always do.
+    return bool(data.get("send_ahead_bullets"))
+
+
+def find_recap_section(data: dict) -> dict | None:
+    for section in data.get("sections", []):
+        if isinstance(section, dict):
+            heading = text(section.get("heading") or section.get("title"))
+            if RECAP_HEADING_RE.match(heading):
+                return section
+    return None
+
+
+def recap_source_line(entry: dict) -> str:
+    kind = text(entry.get("kind")) or "source"
+    status = text(entry.get("status")) or "unknown"
+    detail = text(entry.get("detail")) or text(entry.get("searched"))
+    line = f"{kind} - {status}"
+    return f"{line}: {detail}" if detail else line
+
+
+def validate_recap(data: dict) -> None:
+    if not recap_required(data):
+        return
+
+    section = find_recap_section(data)
+    if section is None:
+        seen = [
+            text(s.get("heading") or s.get("title"))
+            for s in data.get("sections", [])
+            if isinstance(s, dict)
+        ]
+        raise RecapValidationError(
+            'missing required "Last meeting recap" section; headings found: '
+            f"{seen}. Resolve the prior instance per "
+            "agenda-creator/references/context-sources.md before rendering."
+        )
+
+    items = normalize_items(section.get("items"))
+    notes = [text(note) for note in section.get("notes", []) if text(note).strip()]
+    if not items and not notes:
+        raise RecapValidationError('"Last meeting recap" section is present but empty')
+
+    sources = data.get("recap_sources") or section.get("recap_sources") or []
+    parsed = [
+        s
+        for s in sources
+        if isinstance(s, dict) and text(s.get("kind")) and text(s.get("status"))
+    ]
+    if not parsed:
+        raise RecapValidationError(
+            'recap_sources[] is required, and each entry needs "kind" and "status"; '
+            f"found: {sources!r}"
+        )
+
+    unknown = {text(s.get("kind")) for s in parsed} - RECAP_SOURCE_KINDS
+    if unknown:
+        print(f"warning: unrecognized recap_sources kind(s): {sorted(unknown)}", file=sys.stderr)
+
+    if not any(text(s.get("status")) == "found" for s in parsed):
+        blob = " ".join(
+            [f"{item.get('label', '')} {item.get('body', '')}" for item in items] + notes
+        )
+        if NO_PRIOR_SENTINEL.lower() not in blob.lower():
+            raise RecapValidationError(
+                "no prior-meeting source was found, so the recap section must contain the "
+                f'exact phrase "{NO_PRIOR_SENTINEL}" along with the slots and sources searched'
+            )
+        if not any(s.get("searched") or s.get("detail") for s in parsed):
+            raise RecapValidationError(
+                'not-found recap_sources must carry "searched" or "detail" naming the '
+                "windows, title hints, and paths that were checked"
+            )
 
 
 def run_xml(value: str, *, bold: bool = False, italic: bool = False, size: int | None = None) -> str:
@@ -138,6 +268,8 @@ def document_body(data: dict) -> str:
     subtitle = text(data.get("subtitle") or "")
     bullets = [text(item) for item in data.get("send_ahead_bullets", [])]
     validate_bullets(bullets)
+    validate_recap(data)
+    recap_section = find_recap_section(data)
 
     parts = [simple_paragraph(title, style="Title")]
     if subtitle:
@@ -175,6 +307,16 @@ def document_body(data: dict) -> str:
         for note in notes:
             if note.strip():
                 parts.append(simple_paragraph(note, bullet=True))
+
+        # Print provenance inside the recap itself, so a thin or empty recap is
+        # visibly "checked and came up empty" rather than looking unattempted.
+        if section is recap_section:
+            recap_sources = data.get("recap_sources") or section.get("recap_sources") or []
+            entries = [entry for entry in recap_sources if isinstance(entry, dict)]
+            if entries:
+                parts.append(labeled_paragraph("Recap sources", ""))
+                for entry in entries:
+                    parts.append(simple_paragraph(recap_source_line(entry), bullet=True))
 
     footer_notes = [text(item) for item in data.get("notes", []) if text(item).strip()]
     if footer_notes:
@@ -307,16 +449,52 @@ def load_data(args: argparse.Namespace) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Create a 1:1 agenda Word document.")
     parser.add_argument("--input", help="Path to agenda JSON")
-    parser.add_argument("--output", required=True, help="Path to write .docx")
+    parser.add_argument("--output", help="Path to write .docx")
     parser.add_argument("--example", action="store_true", help="Write an example agenda document")
+    recap = parser.add_mutually_exclusive_group()
+    recap.add_argument(
+        "--require-recap",
+        action="store_true",
+        help="Force the Last meeting recap check on, whatever the payload looks like",
+    )
+    recap.add_argument(
+        "--no-require-recap",
+        action="store_true",
+        help="Skip the Last meeting recap check (trackers and other non-agenda prep docs)",
+    )
+    parser.add_argument(
+        "--validate-only",
+        action="store_true",
+        help="Validate the payload and write nothing; use to pre-check a batch of agendas",
+    )
     args = parser.parse_args()
+
+    if not args.validate_only and not args.output:
+        parser.error("--output is required unless --validate-only is given")
+
+    global REQUIRE_RECAP
+    if args.require_recap:
+        REQUIRE_RECAP = True
+    elif args.no_require_recap:
+        REQUIRE_RECAP = False
 
     try:
         data = load_data(args)
-        create_docx(data, Path(args.output))
+        if args.validate_only:
+            validate_bullets([text(item) for item in data.get("send_ahead_bullets", [])])
+            validate_recap(data)
+        else:
+            create_docx(data, Path(args.output))
+    except RecapValidationError as exc:
+        print(f"error: recap: {exc}", file=sys.stderr)
+        return 2
     except Exception as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
+
+    if args.validate_only:
+        print(f"OK {args.input or 'example'}")
+        return 0
 
     print(f"Wrote {Path(args.output).resolve()}")
     return 0
