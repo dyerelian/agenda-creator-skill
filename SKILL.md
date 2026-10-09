@@ -15,10 +15,33 @@ Create a Word agenda for any meeting — a manager 1:1, team meeting, project sy
 2. Gather relevant context before drafting — for **every** meeting type, not just 1:1s. Review prior agendas or notes for this meeting or counterpart, the most recent meeting(s) on this topic, and any related email threads, notes, or documents. Read `references/context-sources.md` and use Granola, Outlook, Slack, Atlassian, Monday.com, and GTD workbook context within the user's requested scope. **Granola and the Outlook series are not optional** for a recurring meeting's recap — see step 4. For a general (non-1:1) meeting, also look for the meeting's purpose, attendees, and any open decisions or action items from the last time the group met.
 3. Extract open loops: prior commitments, unresolved asks, blockers, decisions, feedback themes, priority changes, career/growth topics, and relationship or stakeholder risks.
 4. Build the **last meeting recap** — mandatory, and enforced by the renderer. Decide recurrence from **Outlook** (`IsRecurring` on the appointment, or the existence of an earlier instance in the series), never from whether a prior agenda filename happens to match: generically-titled slots like `Status Update` and `DXP/CDP Office Hours` are recurring meetings whose filenames drift, and treating a filename miss as "not recurring" is what silently dropped recaps before. Then follow the "Recurring meetings: prior-instance & recap sourcing" procedure in `references/context-sources.md`: resolve the prior instance from the calendar, correlate its Granola note **by start time** (`created_at` is the meeting start in UTC — title search is unreliable), fall back to `get_transcript` when the summary is null, and use the prior agenda `.docx` only as a supplementary source. Produce a recap covering: a short summary of what was discussed, open follow-ups / action items, decisions made, and suggested talking points. Carry unresolved follow-ups forward. Record what you checked in `recap_sources[]`. If nothing is found, the section must say **"No prior meeting found"** and name the slots and sources searched.
-5. Draft two layers:
+5. **Interview the user, context first.** Before drafting, show what you found, then ask for direction. Do this for every meeting, one meeting at a time when there are several, and wait for the answer before the next one. (Standing request from Dan, 2026-10-09.) See "Agenda interview" below.
+6. Draft two layers, folding in the interview answers with precedence over auto-pulled context:
    - Send-ahead bullets: 3-10 bullets, each 5-10 words, written as concise agenda guideposts safe to paste into an invite, email, or Slack message.
    - Detailed notes: robust private preparation material with context, evidence, prompts, decisions, tradeoffs, risks, and proposed asks.
-6. Generate the `.docx` with `scripts/create_agenda_docx.py` (see "Generate the Word document" below). Include the send-ahead bullets in the final response so the user can paste them into a calendar invite, Slack message, or email.
+7. Generate the `.docx` with `scripts/create_agenda_docx.py` (see "Generate the Word document" below). Include the send-ahead bullets in the final response so the user can paste them into a calendar invite, Slack message, or email.
+
+## Agenda interview
+
+The interview turns a generic draft into the meeting the user actually wants. Present the context first so the user reacts to evidence instead of starting from a blank page.
+
+**Show, in this order:**
+
+1. **Meeting line.** Subject, day, time, and counterpart or attendees (resolve generic subjects through `meeting-aliases.json`).
+2. **Last meeting recap.** The step 4 recap in short form: date and source, what was discussed, decisions, and open follow-ups with owners. Say plainly when the prior instance was unrecorded and what you used instead.
+3. **New info I'd add.** What changed since that meeting and belongs on this agenda: GTD changes, open waiting-for items with the counterpart, recent Granola, Slack, Teams, Jira or Confluence activity, and relevant data. Lead each bullet with the point, and frame decisions as questions.
+
+**Then ask once:**
+
+> What's the **goal**? What should be **included** or cut? Which **prior info** should I reference? Any **decisions or asks** to land? Any **items to review**? Or say **skip** and I'll auto-draft from the above.
+
+Every field is optional. Handle the answer:
+
+- **Direction given** → it wins over auto-pulled context: `goal` sets the subtitle or a leading "Purpose & desired outcome" item; `include` and `review_items` become discussion items; `decisions_asks` becomes a "Decisions needed / asks" section; `reference_prior` names the sources to pull and appears in `context_reviewed`. Record the user's direction in the top-level `notes`.
+- **New material** (a file, folder, or dataset to analyze, such as a media plan) → analyze it, propose concrete discussion items with the numbers, and confirm before folding them in.
+- **Skip** → auto-draft from the recap and new info.
+
+Persist each answer in `Daily Plan\meeting-directions.json` (key = lowercased subject + `|` + start `YYYY-MM-DDTHH:MM`; BOM-free; same shape `close-day` uses), so the same meeting instance is never re-asked. If a stored entry already exists, reuse it and say so instead of asking again.
 
 ## Output location & filename
 
