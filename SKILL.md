@@ -28,7 +28,7 @@ The interview turns a generic draft into the meeting the user actually wants. Pr
 **Show, in this order:**
 
 1. **Meeting line.** Subject, day, time, and counterpart or attendees (resolve generic subjects through `meeting-aliases.json`).
-2. **Last meeting recap.** The step 4 recap in short form: date and source, what was discussed, decisions, and open follow-ups with owners. Say plainly when the prior instance was unrecorded and what you used instead.
+2. **Last meeting recap.** The step 4 recap in short form: date and source, what was discussed, decisions, and open follow-ups with owners, **one per line**. Say plainly when the prior instance was unrecorded and what you used instead. When the Granola note's `summary` is null, say so and ask the user to paste the app's "Next Steps" if your transcript-derived list is missing anything: the API does not return the AI summary the user sees in the Granola app.
 3. **New info I'd add.** What changed since that meeting and belongs on this agenda: GTD changes, open waiting-for items with the counterpart, recent Granola, Slack, Teams, Jira or Confluence activity, and relevant data. Lead each bullet with the point, and frame decisions as questions.
 
 **Then ask once:**
@@ -137,11 +137,11 @@ Every agenda — 1:1 or general — includes a **Last meeting recap** section ne
 
 - **Date + source** — the date of the last instance and which source(s) the recap was built from (Granola note, prior agenda, notes, or email).
 - **Recap summary** — a short narrative of what was discussed last time.
-- **Open follow-ups / action items** — outstanding commitments carried forward, with owner where known.
+- **Open follow-ups / action items** — outstanding commitments carried forward, **one bullet per action** in the recap section's `notes` array, written as `Owner: action (due date)`. Use the meeting's own wording. A GTD key may follow in parentheses, but never replaces the description (`Mariyo: build the benefit utilization report for new joins (W-318)`, not `usage report (W-318)`). Never pack several follow-ups into one item body.
 - **Decisions made** — key decisions reached last time.
 - **Suggested talking points** — agenda items derived from last call's loose ends; these can seed this meeting's send-ahead bullets and discussion topics.
 
-Unresolved follow-ups should surface as this meeting's talking points or commitments so nothing is dropped. If there was no prior meeting, state the exact phrase **"No prior meeting found"** plus the slots and sources searched, so the reader knows it was checked, not skipped.
+Unresolved follow-ups must each reappear as one of this meeting's talking points or a named line under "Commitments" so nothing is dropped. "See above" is not a commitment. All five parts are required; write "None recorded" rather than omitting Decisions made or Suggested talking points. (Verified miss, 2026-11-17 Mariyo 1:1: six Granola Next Steps were collapsed into one GTD-coded sentence, and the utilization report never surfaced as a talking point.) If there was no prior meeting, state the exact phrase **"No prior meeting found"** plus the slots and sources searched, so the reader knows it was checked, not skipped.
 
 Record provenance alongside it in a top-level `recap_sources` array. Each entry takes `kind` (`outlook_series`, `granola`, `prior_agenda`, `local_notes`, `tracker`, `email`, `alias_map`), `status` (`found` / `not_found`), and a `detail` (or `searched`) string. The renderer prints these under a **Recap sources** label inside the recap section, which is what makes a genuinely empty recap legible as checked:
 

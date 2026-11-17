@@ -26,6 +26,7 @@ from xml.sax.saxutils import escape
 WORD_LIMIT_RE = re.compile(r"[A-Za-z0-9]+(?:'[A-Za-z0-9]+)?")
 
 # Tolerates an optional leading section number, e.g. "2. Last meeting recap".
+GTD_KEY_RE = re.compile(r"\b[PAWI]-\d{2,4}\b")
 RECAP_HEADING_RE = re.compile(r"^\s*(?:\d+\s*[.)]\s*)?last\s+meeting\s+recap\s*$", re.I)
 NO_PRIOR_SENTINEL = "No prior meeting found"
 RECAP_SOURCE_KINDS = {
@@ -191,6 +192,19 @@ def validate_recap(data: dict) -> None:
     unknown = {text(s.get("kind")) for s in parsed} - RECAP_SOURCE_KINDS
     if unknown:
         print(f"warning: unrecognized recap_sources kind(s): {sorted(unknown)}", file=sys.stderr)
+
+    # A recap line carrying several GTD keys is a crammed follow-up list. Those
+    # read as missing items (2026-11-17 Mariyo miss). Warn so they get split
+    # into one bullet per action.
+    for item in items:
+        line = f"{item.get('label', '')} {item.get('body', '')}"
+        keys = GTD_KEY_RE.findall(line)
+        if len(keys) >= 3:
+            print(
+                f'warning: recap item "{text(item.get("label"))}" packs {len(keys)} GTD keys '
+                f"({', '.join(keys)}); list each follow-up as its own bullet in plain words",
+                file=sys.stderr,
+            )
 
     if not any(text(s.get("status")) == "found" for s in parsed):
         blob = " ".join(
